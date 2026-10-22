@@ -51,5 +51,8 @@ jobs:
         with:
           context: ./web_injection_maybe_5000
           file: ./web_injection_maybe_5000/Dockerfile
+          platforms: linux/amd64
           push: true
+          provenance: false
+          sbom: false
           tags: ${{ steps.tag_step.outputs.target_image }}

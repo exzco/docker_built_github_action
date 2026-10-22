@@ -51,5 +51,8 @@ jobs:
         with:
           context: ./web_xss_c42h0_3000
           file: ./web_xss_c42h0_3000/Dockerfile
+          platforms: linux/amd64
           push: true
+          provenance: false
+          sbom: false
           tags: ${{ steps.tag_step.outputs.target_image }}
