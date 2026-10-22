@@ -1,0 +1,24 @@
+services:
+  app:
+    image: lab-app:latest
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+
+  bot:
+    image: lab-bot:latest
+    build:
+      context: ./bot
+      dockerfile: Dockerfile
+    network_mode: "service:app"
+    shm_size: "128mb"
+    deploy:
+      resources:
+        limits:
+          memory: 384M
+        reservations:
+          memory: 128M
+    depends_on:
+      - app

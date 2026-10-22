@@ -9,7 +9,7 @@ import urllib.parse
 HOST = "0.0.0.0"
 PORT = 5000
 
-FLAG = os.environ.get("FLAG", "flag{！！！联系管理员！！！}")
+FLAG = os.environ.get("GZCTF_FLAG", "flag{！！！联系管理员！！！}")
 APP_ORIGIN = os.environ.get("APP_ORIGIN", "http://127.0.0.1:5000")
 
 STORE = {}
@@ -224,7 +224,7 @@ def bot_worker_loop():
                             java_script_enabled=True,
                         )
                         ctx.add_cookies([
-                            {"name": "FLAG", "value": FLAG, "url": APP_ORIGIN + "/"},
+                            {"name": "GZCTF_FLAG", "value": FLAG, "url": APP_ORIGIN + "/"},
                         ])
                         page = ctx.new_page()
                         try:
@@ -274,8 +274,8 @@ def serve_conn(conn, addr):
 
 
 def main():
-    if "FLAG" not in os.environ:
-        print("[!!] 未设置 FLAG 环境变量，使用缺省值")
+    if "GZCTF_FLAG" not in os.environ:
+        print("[!!] 未设置 GZCTF_FLAG 环境变量")
 
     threading.Thread(target=bot_worker_loop, daemon=True).start()
     print("[*] Admin Bot Worker started")
