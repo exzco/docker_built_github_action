@@ -1,0 +1,14 @@
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - APP_ORIGIN=http://127.0.0.1:5000
+    shm_size: '256m'
+    restart: always
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
