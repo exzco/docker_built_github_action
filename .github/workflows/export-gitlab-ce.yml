@@ -1,0 +1,84 @@
+name: Export GitLab CE Image
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web_gitlab_ce/**'
+      - '.github/workflows/export-gitlab-ce.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 关键步骤：GitLab CE 镜像解压后约 3.5GB，清理 Runner 默认预装软件避免磁盘耗尽
+      - name: Free Disk Space
+        run: |
+          echo "==== 正在清理 Runner 磁盘空间 ===="
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf "/usr/local/share/boost"
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          df -h
+
+      - name: Pull GitLab CE Image
+        run: |
+          echo "==== 正在拉取 gitlab/gitlab-ce:19.0.1-ce.0 镜像 ===="
+          docker pull gitlab/gitlab-ce:19.0.1-ce.0
+
+      - name: Save and Gzip Image
+        run: |
+          echo "==== 正在打包并 gzip 压缩镜像 ===="
+          docker save gitlab/gitlab-ce:19.0.1-ce.0 | gzip > gitlab-ce-19.0.1.tar.gz
+
+          echo "==== 打包完成，文件大小如下 ===="
+          ls -lh gitlab-ce-19.0.1.tar.gz
+          sha256sum gitlab-ce-19.0.1.tar.gz > gitlab-ce-19.0.1.tar.gz.sha256
+          cat gitlab-ce-19.0.1.tar.gz.sha256
+
+      # 1. 发布到 GitHub Releases（提供公网直链，方便使用 wget 极速下载）
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: "gitlab-ce-v19.0.1"
+          name: "GitLab CE 19.0.1-ce.0 (Offline Archive)"
+          body: |
+            ## GitLab CE 离线 Docker 镜像压缩包
+            - 镜像版本：`gitlab/gitlab-ce:19.0.1-ce.0`
+            - 适用场景：内网/离线/网络受限环境下快速部署私有 GitLab
+
+            ### 本地加载命令：
+            ```bash
+            # 1. 验证完整性 (可选)
+            sha256sum -c gitlab-ce-19.0.1.tar.gz.sha256
+
+            # 2. 载入镜像
+            docker load < gitlab-ce-19.0.1.tar.gz
+
+            # 3. 启动服务
+            cd web_gitlab_ce
+            docker compose up -d
+            ```
+          files: |
+            gitlab-ce-19.0.1.tar.gz
+            gitlab-ce-19.0.1.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # 2. 上传为 Artifact 作为双重备份
+      - name: Upload to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: gitlab-ce-artifact
+          path: |
+            gitlab-ce-19.0.1.tar.gz
+            gitlab-ce-19.0.1.tar.gz.sha256
+          retention-days: 7
