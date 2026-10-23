@@ -1,0 +1,71 @@
+name: Export Web SDL Images
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'web_sdl_image/**'
+      - '.github/workflows/export-web-sdl-images.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  export-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Pull Docker Images
+        run: |
+          echo "==== 正在拉取目标镜像 ===="
+          docker pull registry:2
+          docker pull jenkins/jenkins:lts-jdk21
+
+      - name: Save and Gzip Images
+        run: |
+          echo "==== 正在打包并 gzip 压缩镜像包 ===="
+          docker save \
+            registry:2 \
+            jenkins/jenkins:lts-jdk21 | gzip > web-sdl-images.tar.gz
+
+          echo "==== 打包完成，文件大小如下 ===="
+          ls -lh web-sdl-images.tar.gz
+          sha256sum web-sdl-images.tar.gz > web-sdl-images.tar.gz.sha256
+          cat web-sdl-images.tar.gz.sha256
+
+      # 1. 方案 A：上传为 GitHub Actions Artifact（支持在 Actions 网页界面直接点击下载）
+      - name: Upload to GitHub Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-sdl-images-artifact
+          path: |
+            web-sdl-images.tar.gz
+            web-sdl-images.tar.gz.sha256
+          retention-days: 7
+
+      # 2. 方案 B：发布到 GitHub Releases（提供直链，支持 wget / curl 直接快速下载）
+      - name: Publish to GitHub Release
+        uses: softprops/action-gh-release@v2
+        if: success()
+        with:
+          tag_name: "sdl-images-latest"
+          name: "Web SDL Docker Images (Offline Archive)"
+          body: |
+            ## 离线 Docker 镜像压缩包 (Web SDL)
+            包含镜像：
+            - `registry:2`
+            - `jenkins/jenkins:lts-jdk21`
+
+            ### 本地加载命令：
+            ```bash
+            docker load < web-sdl-images.tar.gz
+            ```
+          files: |
+            web-sdl-images.tar.gz
+            web-sdl-images.tar.gz.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
