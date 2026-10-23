@@ -1,0 +1,27 @@
+version: '3.8'
+
+services:
+  # 1. 本地私有 Docker 镜像仓库
+  registry:
+    image: registry:2
+    container_name: registry
+    restart: always
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./data/registry:/var/lib/registry
+
+  # 2. Jenkins 控制台 (支持在流水线中直接调用宿主机 Docker)
+  jenkins:
+    image: jenkins/jenkins:lts-jdk21
+    container_name: jenkins
+    restart: always
+    user: root # 关键配置：确保容器内有权限访问挂载的 docker.sock
+    ports:
+      - "8080:8080"
+      - "50000:50000"
+    volumes:
+      - ./data/jenkins:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=false
